@@ -1,0 +1,290 @@
+import json
+import os
+import random
+import subprocess
+import time
+from collections import Counter
+from pathlib import Path
+
+import requests
+
+Path("cache").mkdir(exist_ok=True)
+Path("ext/comment").mkdir(parents=True, exist_ok=True)
+Path("ext/longtext").mkdir(parents=True, exist_ok=True)
+Path("resources/pic").mkdir(parents=True, exist_ok=True)
+Path("resources/video").mkdir(parents=True, exist_ok=True)
+
+HEADERS = {
+    "authority": "m.weibo.cn",
+    "accept": "application/json, text/plain, */*",
+    "accept-language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+    "cache-control": "no-cache",
+    "mweibo-pwa": "1",
+    "origin": "https://m.weibo.cn",
+    "pragma": "no-cache",
+    "referer": "https://m.weibo.cn/compose/",
+    "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "user-agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
+    "x-requested-with": "XMLHttpRequest",
+}
+
+
+# COOKIES: dict = json.load(open("cookie.json", "r"))
+# cookie: dict = COOKIES["weibo.cn"]
+
+cookie: dict = json.load(open("cookie.json", "r"))
+cookie["MLOGIN"] = 1
+
+
+cache_dir = Path("cache")
+cache_dir.mkdir(exist_ok=True)
+
+
+def __request(url: str, custom_headers: dict = {}) -> dict:
+    headers = {
+        **HEADERS,
+        **custom_headers,
+        "cookie": "; ".join([f"{k}={v}" for k, v in cookie.items()]),
+        "x-xsrf-token": cookie.get("XSRF-TOKEN", ""),
+    }
+    return requests.get(url, headers=headers).json()
+
+
+def request(url: str, referer: str = "", cached: bool = False, all_ret=False) -> dict:
+    cache_file = cache_dir / f"{url.split('/')[-1]}.json"
+    if cached and cache_file.exists():
+        return json.load(cache_file.open("r", encoding="utf-8"))
+    headers = {"referer": referer} if referer else {}
+    resp = __request(url, headers)
+    time.sleep(random.random() * 0.3 + 0.7)
+    if "ok" not in resp:
+        print(resp)
+        raise NotImplementedError
+    if resp["ok"] != 1:
+        refresh_cookie()
+        resp = __request(url, headers)
+    if not all_ret:
+        resp = resp.get("data", {})
+    if cached:
+        json.dump(resp, cache_file.open(
+            "w", encoding="utf-8"), ensure_ascii=False)
+    return resp
+
+
+def refresh_cookie(return_uid=False):
+    cookie["_T_WM"] = int(time.time() / 3600) * 100001
+    resp = request("https://m.weibo.cn/api/config")
+    cookie["XSRF-TOKEN"] = resp["st"]
+
+    print(f"Time watermark: {cookie['_T_WM']}")
+    print(f"XSRF token: {cookie['XSRF-TOKEN']}")
+
+    if return_uid:
+        return resp["uid"]
+
+
+UID = refresh_cookie(return_uid=True)
+
+more_url = request(
+    f"https://m.weibo.cn/profile/info?uid={UID}",
+    referer=f"https://m.weibo.cn/profile/{UID}",
+)["more"]
+
+CID = int(more_url.split("/")[-1].split("_")[0])
+
+
+# ====================================================================================================
+
+
+def fetchRefreshedPost(post) -> dict:
+    pid = post["id"]
+    data = request(
+        f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO&page_type=03&since_id={pid}",
+        referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+    )
+    return data["cards"][0]["mblog"]
+
+
+def fetchLongText(post, dirname) -> None:
+    pid = post["id"]
+    filename = f"{dirname}/longtext/{pid}.json"
+    if Path(filename).exists():
+        post["longtext"] = json.load(open(filename, "r"))
+        return
+    longtext = request(
+        f"https://m.weibo.cn/statuses/extend?id={pid}",
+        referer=f"https://m.weibo.cn/detail/{pid}",
+    ).get("longTextContent", "")
+    json.dump(longtext, open(filename, "w"), ensure_ascii=False)
+    post["longtext"] = longtext
+
+
+def fetchPhoto(pic, post_id: str, dirname) -> None:
+    pid = pic["pid"]
+    url = pic["large"]["url"]
+    if url.endswith(".jpg"):
+        filename = f"{dirname}/pic/{post_id}_{pid}.jpg"
+    elif url.endswith(".gif"):
+        filename = f"{dirname}/pic/{post_id}_{pid}.gif"
+    else:
+        print(pic)
+        raise NotImplementedError
+    if not Path(filename).exists():
+        print("[+] Downloading Photo", pid, "from", url)
+        resp = requests.get(url, headers={"referer": "https://weibo.com/"})
+        open(filename, "wb").write(resp.content)
+    if "type" in pic:
+        assert pic["type"] == "gifvideos", str(pic)
+        assert "videoSrc" in pic, str(pic)
+        assert url.endswith(".gif"), str(pic)
+
+
+def fetchVideo(post, dirname) -> None:
+    pid = post["id"]
+    url = list(post["page_info"]["urls"].values())[0]
+    ext = url.split("?")[0].split(".")[-1]
+    filename = f"{dirname}/video/{pid}.mp4"
+    if Path(filename).exists():
+        return
+    print("[+] Downloading Video", pid, "from", url)
+    url = list(fetchRefreshedPost(post)["page_info"]["urls"].values())[0]
+    if ext == "mp4":
+        resp = requests.get(url)
+        open(filename, "wb").write(resp.content)
+    else:
+        command = f'ffmpeg -i "{url}" -c copy -bsf:a aac_adtstoasc {filename}'
+        subprocess.run(command, shell=True)
+
+
+def fetchSecondComments(mid, cid, max_id, dirname) -> (list, int):
+    if int(max_id) == 0:
+        filename = f"{dirname}/comment/{mid}_{cid}.json"
+    else:
+        filename = f"{dirname}/comment/{mid}_{cid}_{max_id}.json"
+    if Path(filename).exists():
+        data = json.load(open(filename, "r"))
+    else:
+        print("[+] Downloading Comment Child", cid, max_id)
+        url = f"https://m.weibo.cn/comments/hotFlowChild?cid={cid}&max_id={max_id}&max_id_type=0"
+        data = request(url, all_ret=True)
+        json.dump(data, open(filename, "w"), ensure_ascii=False)
+    comments = data["data"]
+    max_id = data["max_id"]
+    return comments, max_id
+
+
+def fetchFirstComments(mid, max_id, dirname) -> (list, int):
+    if int(max_id) == 0:
+        filename = f"{dirname}/comment/{mid}.json"
+    else:
+        filename = f"{dirname}/comment/{mid}_{max_id}.json"
+    if Path(filename).exists():
+        data = json.load(open(filename, "r"))
+    else:
+        print("[+] Downloading Comment", mid, max_id)
+        url = f"https://m.weibo.cn/comments/hotflow?mid={mid}&max_id={max_id}&max_id_type=0"
+        data = request(url, all_ret=True)
+        json.dump(data, open(filename, "w"), ensure_ascii=False)
+    if "data" not in data:
+        return [], 0
+    data = data["data"]
+    comments = []
+    for x in data["data"]:
+        if x["comments"] and x["total_number"] != len(x["comments"]):
+            comments_all = []
+            _max_id = 0
+            while True:
+                _data, _max_id = fetchSecondComments(
+                    mid, x["id"], _max_id, dirname)
+                comments_all += _data
+                if _max_id == 0:
+                    break
+            x["comments_all"] = comments_all
+        comments.append(x)
+    max_id = data["max_id"]
+    return comments, max_id
+
+
+def fetchComments(post, dirname) -> None:
+    mid = post["mid"]
+    if post["comments_count"] == 0:
+        post["comments"] = []
+        return
+    max_id = 0
+    comments = []
+    while True:
+        _comments, max_id = fetchFirstComments(mid, max_id, dirname)
+        comments += _comments
+        if max_id == 0:
+            break
+    post["comments"] = comments
+
+
+def fetchRelatedContent(post):
+
+    # 原创的微博
+    if post["isLongText"]:
+        fetchLongText(post, "ext")
+    if "raw_text" in post and "page_info" in post:
+        if post["page_info"]["type"] == "video" and post["page_info"]["urls"] is not None:
+            fetchVideo(post, "resources")
+    if "pics" in post:
+        for pic in post["pics"]:
+            fetchPhoto(pic, post["id"], "resources")
+    fetchComments(post, "ext")
+
+    # 转发的微博
+    # if "retweeted_status" in post and post["retweeted_status"].get("isLongText", False):
+    #     post["retweeted_status"]["longtext"] = fetchLongText(post["retweeted_status"])
+    # if "retweeted_status" in post and post["retweeted_status"].get("pics", []):
+    #     for pic in post["retweeted_status"]["pics"]:
+    #         fetchPhoto(pic)
+
+
+# ====================================================================================================
+
+
+def fetchPosts():
+    data = request(
+        f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+        referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+        cached=True,
+    )
+    posts = []
+    while len(data["cards"]) > 0 and "since_id" in data["cardlistInfo"]:
+        since_id = data["cardlistInfo"]["since_id"]
+        for card in data["cards"]:
+            if card["card_type"] == 9:
+                fetchRelatedContent(card["mblog"])
+                posts.append(card["mblog"])
+            elif card["card_type"] == 11 and "card_group" in card:
+                for sub_card in card["card_group"]:
+                    if sub_card["card_type"] == 9:
+                        fetchRelatedContent(sub_card["mblog"])
+                        posts.append(sub_card["mblog"])
+                    else:
+                        print("[+] Unknown card type", sub_card["card_type"])
+            else:
+                print("[+] Unknown card type", card["card_type"])
+        print("[+]", len(posts), "posts", posts[-1]["created_at"], since_id)
+        data = request(
+            f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO&page_type=03&since_id={since_id}",
+            referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+            cached=True,
+        )
+    return posts
+
+
+posts = fetchPosts()
+json.dump(posts, open(f"posts.json", "w"), ensure_ascii=False)
