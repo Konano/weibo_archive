@@ -133,10 +133,8 @@ def fetchLongText(post, dirname) -> None:
 def fetchPhoto(pic, post_id: str, dirname) -> None:
     pid = pic["pid"]
     url = pic["large"]["url"]
-    if url.endswith(".jpg"):
-        filename = f"{dirname}/pic/{post_id}_{pid}.jpg"
-    elif url.endswith(".gif"):
-        filename = f"{dirname}/pic/{post_id}_{pid}.gif"
+    if url.split(".")[-1] in ["jpg", "gif"]:
+        filename = f"{dirname}/pic/{post_id}_{pid}.{url.split('.')[-1]}"
     else:
         print(pic)
         raise NotImplementedError
@@ -144,10 +142,25 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         print("[+] Downloading Photo", pid, "from", url)
         resp = requests.get(url, headers={"referer": "https://weibo.com/"})
         open(filename, "wb").write(resp.content)
-    if "type" in pic:
-        assert pic["type"] == "gifvideos", str(pic)
-        assert "videoSrc" in pic, str(pic)
-        assert url.endswith(".gif"), str(pic)
+
+    if "type" not in pic:
+        return
+    if pic["type"] == "livephotos":
+        url = pic["videoSrc"]
+        if url.split(".")[-1] in ["mov"]:
+            filename = f"{dirname}/pic/{post_id}_{pid}.{url.split('.')[-1]}"
+        else:
+            print(pic)
+            raise NotImplementedError
+        if not Path(filename).exists():
+            print("[+] Downloading Live Photo", pid, "from", url)
+            resp = requests.get(url, headers={"referer": "https://weibo.com/"})
+            open(filename, "wb").write(resp.content)
+    elif pic["type"] == "gifvideos":
+        pass
+    else:
+        print(pic)
+        raise NotImplementedError
 
 
 def fetchVideo(post, dirname) -> None:
