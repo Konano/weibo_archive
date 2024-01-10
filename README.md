@@ -57,6 +57,6 @@
 ## TODO
 
 - [x] 保存动态图片。
-- [ ] 增量备份。
+- [x] 增量备份。
 - [ ] 导出成 PDF 或者 MHTML。**[help_wanted]**
 - [ ] 搞一个 Chrome 插件，可以在微博页面直接备份。**[help_wanted]**
