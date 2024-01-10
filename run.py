@@ -72,7 +72,7 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
         print(resp)
         raise NotImplementedError
     if resp["ok"] != 1:
-        if resp.get("msg", "") in ["已过滤部分评论", "快来发表你的评论吧"]:
+        if resp.get("msg", "") in ["已过滤部分评论", "快来发表你的评论吧", "还没有人评论哦~快来抢沙发！"]:
             pass
         else:
             print(resp)
@@ -98,6 +98,8 @@ def refresh_cookie(return_uid=False):
 
 
 UID = refresh_cookie(return_uid=True)
+# 如果你想爬取别人的微博，直接修改这里的 UID 即可
+# UID = 1111681197
 
 more_url = request(
     f"https://m.weibo.cn/profile/info?uid={UID}",
@@ -306,5 +308,7 @@ def fetchPosts():
     return posts
 
 
-posts = fetchPosts()
-json.dump(posts, open(f"posts.json", "w"), ensure_ascii=False)
+if __name__ == "__main__":
+    posts = fetchPosts()
+    json.dump(posts, open(f"posts.json", "w"), ensure_ascii=False)
+    print("Total", len(posts), "posts")
