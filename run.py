@@ -62,7 +62,7 @@ def __request(url: str, custom_headers: dict = {}) -> dict:
 
 
 def request(url: str, referer: str = "", cached: bool = False, all_ret=False) -> dict:
-    cache_file = cache_dir / f"{url.split('/')[-1]}.json"
+    cache_file = cache_dir / f"{url.split('/')[-1].replace('?','_')}.json"
     if cached and cache_file.exists():
         return json.load(cache_file.open("r", encoding="utf-8"))
     headers = {"referer": referer} if referer else {}
