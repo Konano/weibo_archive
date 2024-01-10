@@ -77,8 +77,7 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
     if not all_ret:
         resp = resp.get("data", {})
     if cached:
-        json.dump(resp, cache_file.open(
-            "w", encoding="utf-8"), ensure_ascii=False)
+        json.dump(resp, cache_file.open("w", encoding="utf-8"), ensure_ascii=False)
     return resp
 
 
@@ -192,6 +191,11 @@ def fetchSecondComments(mid, cid, max_id, dirname) -> (list, int):
         url = f"https://m.weibo.cn/comments/hotFlowChild?cid={cid}&max_id={max_id}&max_id_type=0"
         data = request(url, all_ret=True)
         json.dump(data, open(filename, "w"), ensure_ascii=False)
+    if "data" not in data:
+        if data["errno"] == "100011" and data["msg"] == "暂无数据":
+            return [], 0
+        print(data)
+        raise NotImplementedError
     comments = data["data"]
     max_id = data["max_id"]
     return comments, max_id
@@ -218,8 +222,7 @@ def fetchFirstComments(mid, max_id, dirname) -> (list, int):
             comments_all = []
             _max_id = 0
             while True:
-                _data, _max_id = fetchSecondComments(
-                    mid, x["id"], _max_id, dirname)
+                _data, _max_id = fetchSecondComments(mid, x["id"], _max_id, dirname)
                 comments_all += _data
                 if _max_id == 0:
                     break
@@ -245,12 +248,12 @@ def fetchComments(post, dirname) -> None:
 
 
 def fetchRelatedContent(post):
-
     # 原创的微博
     if post["isLongText"]:
         fetchLongText(post, "ext")
     if "raw_text" in post and "page_info" in post:
-        if post["page_info"]["type"] == "video" and post["page_info"]["urls"] is not None:
+        page_info = post["page_info"]
+        if page_info["type"] == "video" and page_info["urls"] is not None:
             fetchVideo(post, "resources")
     if "pics" in post:
         for pic in post["pics"]:
