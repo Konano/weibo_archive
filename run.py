@@ -72,7 +72,7 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
         print(resp)
         raise NotImplementedError
     if resp["ok"] != 1:
-        if "msg" in resp and resp["msg"] == "已过滤部分评论":
+        if resp.get("msg", "") in ["已过滤部分评论", "快来发表你的评论吧"]:
             pass
         else:
             print(resp)
