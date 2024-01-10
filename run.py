@@ -72,8 +72,12 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
         print(resp)
         raise NotImplementedError
     if resp["ok"] != 1:
-        refresh_cookie()
-        resp = __request(url, headers)
+        if "msg" in resp and resp["msg"] == "已过滤部分评论":
+            pass
+        else:
+            print(resp)
+            refresh_cookie()
+            resp = __request(url, headers)
     if not all_ret:
         resp = resp.get("data", {})
     if cached:
