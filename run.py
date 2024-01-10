@@ -1,8 +1,10 @@
+import datetime
 import json
 import os
 import random
 import subprocess
 import time
+import zipfile
 from collections import Counter
 from pathlib import Path
 
@@ -58,7 +60,7 @@ def __request(url: str, custom_headers: dict = {}) -> dict:
         "cookie": "; ".join([f"{k}={v}" for k, v in cookie.items()]),
         "x-xsrf-token": cookie.get("XSRF-TOKEN", ""),
     }
-    return requests.get(url, headers=headers).json()
+    return requests.get(url, headers=headers, timeout=(30, 60)).json()
 
 
 def request(url: str, referer: str = "", cached: bool = False, all_ret=False) -> dict:
@@ -277,7 +279,47 @@ def fetchRelatedContent(post):
 # ====================================================================================================
 
 
+def fetchIncrementalPosts():
+    data = request(
+        f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+        referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+    )
+    posts = json.load(open("posts.json", "r"))
+    post_ids = set([post["id"] for post in posts])
+    while len(data["cards"]) > 0 and "since_id" in data["cardlistInfo"]:
+        since_id: int = data["cardlistInfo"]["since_id"]
+        for card in data["cards"]:
+            if card["card_type"] == 9:
+                if card["mblog"]["id"] in post_ids:
+                    continue
+                fetchRelatedContent(card["mblog"])
+                posts.append(card["mblog"])
+            elif card["card_type"] == 11 and "card_group" in card:
+                for sub_card in card["card_group"]:
+                    if sub_card["card_type"] == 9:
+                        if sub_card["mblog"]["id"] in post_ids:
+                            continue
+                        fetchRelatedContent(sub_card["mblog"])
+                        posts.append(sub_card["mblog"])
+                    else:
+                        print("[+] Unknown card type", sub_card["card_type"])
+            else:
+                print("[+] Unknown card type", card["card_type"])
+        print("[+]", len(posts), "posts", posts[-1]["created_at"], since_id)
+        if str(since_id) in post_ids:
+            break
+        data = request(
+            f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO&page_type=03&since_id={since_id}",
+            referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
+            cached=True,
+        )
+    return posts
+
+
 def fetchPosts():
+    if Path("posts.json").exists():
+        print("检测到 posts.json 文件，将进行增量备份")
+        return fetchIncrementalPosts()
     data = request(
         f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
         referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
@@ -310,5 +352,26 @@ def fetchPosts():
 
 if __name__ == "__main__":
     posts = fetchPosts()
-    json.dump(posts, open(f"posts.json", "w"), ensure_ascii=False)
     print("Total", len(posts), "posts")
+
+    posts = sorted(posts, key=lambda x: x["id"], reverse=True)
+    print(f"[+] Saving into posts.json")
+    json.dump(posts, open("posts.json", "w"), ensure_ascii=False)
+
+    def zipdir(path, ziph):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                ziph.write(
+                    os.path.join(root, file),
+                    os.path.relpath(os.path.join(root, file), os.path.join(path, "..")),
+                )
+
+    current_date = datetime.datetime.now().strftime("%Y%m%d")
+    zip_filename = f"weibo_archive_{current_date}.zip"
+    print(f"[+] Saving into {zip_filename}")
+    zipf = zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED)
+    zipf.write("posts.json")
+    folders = ["ext", "resources"]
+    for folder in folders:
+        zipdir(folder, zipf)
+    zipf.close()
