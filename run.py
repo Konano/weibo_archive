@@ -187,7 +187,7 @@ def fetchVideo(post, dirname) -> None:
         subprocess.run(command, shell=True)
 
 
-def fetchSecondComments(mid, cid, max_id, dirname) -> (list, int):
+def fetchSecondComments(mid, cid, max_id, dirname) -> tuple[list, int]:
     if int(max_id) == 0:
         filename = f"{dirname}/comment/{mid}_{cid}.json"
     else:
@@ -209,7 +209,7 @@ def fetchSecondComments(mid, cid, max_id, dirname) -> (list, int):
     return comments, max_id
 
 
-def fetchFirstComments(mid, max_id, dirname) -> (list, int):
+def fetchFirstComments(mid, max_id, dirname) -> tuple[list, int]:
     if int(max_id) == 0:
         filename = f"{dirname}/comment/{mid}.json"
     else:
