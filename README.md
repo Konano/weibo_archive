@@ -13,9 +13,10 @@
 ### 如何找到自己的 Cookie？
 
 1. 浏览器打开 https://m.weibo.cn/ ，登录自己的微博账号。
-2. 按下 F12 打开开发者工具，切换到 Application/应用 选项卡。
-3. 侧边栏找到左边 Cookie 选项，点击展开。
-4. 找到 "SUB" 和 "SUBP"，将他们的值填入 `cookie.json` 中的 "SUB" 和 "SUBP" 字段。
+2. 打开网站 [https://m.weibo.cn/api/config](https://m.weibo.cn/api/config)。
+3. 按下 F12 打开开发者工具，切换到 Application/应用 选项卡。
+4. 侧边栏找到左边 Cookie 选项，点击展开。
+5. 找到 "SUB" 和 "SUBP"，将他们的值填入 `cookie.json` 中的 "SUB" 和 "SUBP" 字段。
 
 ![](doc/step.png)
 
