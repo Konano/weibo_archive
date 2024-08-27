@@ -5,7 +5,6 @@ import random
 import subprocess
 import time
 import zipfile
-from collections import Counter
 from pathlib import Path
 
 import requests
@@ -42,10 +41,10 @@ HEADERS = {
 }
 
 
-# COOKIES: dict = json.load(open("cookie.json", "r"))
+# COOKIES: dict = json.load(open("cookie.json", "r", encoding="utf-8"))
 # cookie: dict = COOKIES["weibo.cn"]
 
-cookie: dict = json.load(open("cookie.json", "r"))
+cookie: dict = json.load(open("cookie.json", "r", encoding="utf-8"))
 cookie["MLOGIN"] = 1
 
 
@@ -127,13 +126,13 @@ def fetchLongText(post, dirname) -> None:
     pid = post["id"]
     filename = f"{dirname}/longtext/{pid}.json"
     if Path(filename).exists():
-        post["longtext"] = json.load(open(filename, "r"))
+        post["longtext"] = json.load(open(filename, "r", encoding="utf-8"))
         return
     longtext = request(
         f"https://m.weibo.cn/statuses/extend?id={pid}",
         referer=f"https://m.weibo.cn/detail/{pid}",
     ).get("longTextContent", "")
-    json.dump(longtext, open(filename, "w"), ensure_ascii=False)
+    json.dump(longtext, open(filename, "w", encoding="utf-8"), ensure_ascii=False)
     post["longtext"] = longtext
 
 
@@ -193,12 +192,12 @@ def fetchSecondComments(mid, cid, max_id, dirname) -> tuple[list, int]:
     else:
         filename = f"{dirname}/comment/{mid}_{cid}_{max_id}.json"
     if Path(filename).exists():
-        data = json.load(open(filename, "r"))
+        data = json.load(open(filename, "r", encoding="utf-8"))
     else:
         print("[+] Downloading Comment Child", cid, max_id)
         url = f"https://m.weibo.cn/comments/hotFlowChild?cid={cid}&max_id={max_id}&max_id_type=0"
         data = request(url, all_ret=True)
-        json.dump(data, open(filename, "w"), ensure_ascii=False)
+        json.dump(data, open(filename, "w", encoding="utf-8"), ensure_ascii=False)
     if "data" not in data:
         if data["errno"] == "100011" and data["msg"] == "暂无数据":
             return [], 0
@@ -215,12 +214,12 @@ def fetchFirstComments(mid, max_id, dirname) -> tuple[list, int]:
     else:
         filename = f"{dirname}/comment/{mid}_{max_id}.json"
     if Path(filename).exists():
-        data = json.load(open(filename, "r"))
+        data = json.load(open(filename, "r", encoding="utf-8"))
     else:
         print("[+] Downloading Comment", mid, max_id)
         url = f"https://m.weibo.cn/comments/hotflow?mid={mid}&max_id={max_id}&max_id_type=0"
         data = request(url, all_ret=True)
-        json.dump(data, open(filename, "w"), ensure_ascii=False)
+        json.dump(data, open(filename, "w", encoding="utf-8"), ensure_ascii=False)
     if "data" not in data:
         return [], 0
     data = data["data"]
@@ -284,7 +283,7 @@ def fetchIncrementalPosts():
         f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
         referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
     )
-    posts = json.load(open("posts.json", "r"))
+    posts = json.load(open("posts.json", "r", encoding="utf-8"))
     post_ids = set([post["id"] for post in posts])
     while len(data["cards"]) > 0 and "since_id" in data["cardlistInfo"]:
         since_id: int = data["cardlistInfo"]["since_id"]
@@ -356,7 +355,7 @@ if __name__ == "__main__":
 
     posts = sorted(posts, key=lambda x: x["id"], reverse=True)
     print(f"[+] Saving into posts.json")
-    json.dump(posts, open("posts.json", "w"), ensure_ascii=False)
+    json.dump(posts, open("posts.json", "w", encoding="utf-8"), ensure_ascii=False)
 
     def zipdir(path, ziph):
         for root, dirs, files in os.walk(path):
