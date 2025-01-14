@@ -36,7 +36,7 @@
 
 #### 其他的微博备份方案
 
-|  | weibo-archive | [Speechless](https://github.com/meterscao/Speechless) | [MemoMe](https://speechless.fun/) | [weibo-extend](https://github.com/loo-y/weibo-extend) |
+|  | weibo-archive | [Speechless](https://github.com/meterscao/Speechless) | MemoMe\* | [weibo-extend](https://github.com/loo-y/weibo-extend) |
 |:---:|:---:|:---:|:---:|:---:|
 | **运行形式** | 运行代码 | 浏览器插件 | 安装软件 | 浏览器插件 |
 | **收费与否** | 免费 | 免费 | 最低 ￥39 | 免费 |
@@ -54,6 +54,8 @@
 | **备份转发微博的图片** |  | ✅ | ✅ | ✅ |
 | **备份转发微博的视频** |  | ✅ | ✅ | ✅ |
 | **备份收藏的微博** |  |  | ❓ | ✅ |
+
+> *: 目前不再向新用户开放。
 
 ## TODO
 
