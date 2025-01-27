@@ -151,7 +151,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
 
     if "type" not in pic:
         return
-    if pic["type"] == "livephotos":
+    if pic["type"] == "livephoto":
         url = pic["videoSrc"]
         if url.split(".")[-1] in ["mov"]:
             filename = f"{dirname}/pic/{post_id}_{pid}.{url.split('.')[-1]}"
