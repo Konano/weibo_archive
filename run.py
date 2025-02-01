@@ -333,6 +333,9 @@ def fetchIncrementalPosts():
                     print("[+] Unknown card type", sub_card["card_type"])
         else:
             print("[+] Unknown card type", card["card_type"])  
+    if not posts:
+        print("[+]", "No posts found!")
+        return posts
     print("[+]", len(posts), "posts", posts[-1]["created_at"], "last page!")
     return posts
 
@@ -385,6 +388,9 @@ def fetchPosts():
                     print("[+] Unknown card type", sub_card["card_type"])
         else:
             print("[+] Unknown card type", card["card_type"])
+    if not posts:
+        print("[+]", "No posts found!")
+        return posts
     print("[+]", len(posts), "posts", posts[-1]["created_at"], "last page!")
     return posts
 
