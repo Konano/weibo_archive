@@ -285,7 +285,7 @@ def fetchIncrementalPosts():
     )
     posts = json.load(open("posts.json", "r", encoding="utf-8"))
     post_ids = set([post["id"] for post in posts])
-    while len(data["cards"]) > 0 and "since_id" in data["cardlistInfo"]:
+    while "since_id" in data["cardlistInfo"]:
         since_id: int = data["cardlistInfo"]["since_id"]
         for card in data["cards"]:
             if card["card_type"] == 9:
@@ -325,7 +325,7 @@ def fetchPosts():
         cached=True,
     )
     posts = []
-    while len(data["cards"]) > 0 and "since_id" in data["cardlistInfo"]:
+    while "since_id" in data["cardlistInfo"]:
         since_id = data["cardlistInfo"]["since_id"]
         for card in data["cards"]:
             if card["card_type"] == 9:
