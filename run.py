@@ -314,8 +314,6 @@ def fetchIncrementalPosts():
         )
 
     # last page case
-    if len(data["cards"]) == 0:
-        return posts
     for card in data["cards"]:
         if card["card_type"] == 9:
             if card["mblog"]["id"] in post_ids:
@@ -373,8 +371,6 @@ def fetchPosts():
         )
 
     # last page case:
-    if len(data["cards"]) == 0:
-        return posts
     for card in data["cards"]:
         if card["card_type"] == 9:
             fetchRelatedContent(card["mblog"])
