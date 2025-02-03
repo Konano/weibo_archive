@@ -314,6 +314,8 @@ def fetchIncrementalPosts():
         )
 
     # last page case
+    if data["cardlistInfo"].get("since_id"):
+        return posts
     for card in data["cards"]:
         if card["card_type"] == 9:
             if card["mblog"]["id"] in post_ids:
