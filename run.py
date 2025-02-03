@@ -312,6 +312,31 @@ def fetchIncrementalPosts():
             referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
             cached=True,
         )
+
+    # last page case
+    if data["cardlistInfo"].get("since_id"):
+        return posts
+    for card in data["cards"]:
+        if card["card_type"] == 9:
+            if card["mblog"]["id"] in post_ids:
+                continue
+            fetchRelatedContent(card["mblog"])
+            posts.append(card["mblog"])
+        elif card["card_type"] == 11 and "card_group" in card:
+            for sub_card in card["card_group"]:
+                if sub_card["card_type"] == 9:
+                    if sub_card["mblog"]["id"] in post_ids:
+                        continue
+                    fetchRelatedContent(sub_card["mblog"])
+                    posts.append(sub_card["mblog"])
+                else:
+                    print("[+] Unknown card type", sub_card["card_type"])
+        else:
+            print("[+] Unknown card type", card["card_type"])  
+    if not posts:
+        print("[+]", "No posts found!")
+        return posts
+    print("[+]", len(posts), "posts", posts[-1]["created_at"], "last page!")
     return posts
 
 
@@ -346,6 +371,25 @@ def fetchPosts():
             referer=f"https://m.weibo.cn/p/{CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
             cached=True,
         )
+
+    # last page case:
+    for card in data["cards"]:
+        if card["card_type"] == 9:
+            fetchRelatedContent(card["mblog"])
+            posts.append(card["mblog"])
+        elif card["card_type"] == 11 and "card_group" in card:
+            for sub_card in card["card_group"]:
+                if sub_card["card_type"] == 9:
+                    fetchRelatedContent(sub_card["mblog"])
+                    posts.append(sub_card["mblog"])
+                else:
+                    print("[+] Unknown card type", sub_card["card_type"])
+        else:
+            print("[+] Unknown card type", card["card_type"])
+    if not posts:
+        print("[+]", "No posts found!")
+        return posts
+    print("[+]", len(posts), "posts", posts[-1]["created_at"], "last page!")
     return posts
 
 
