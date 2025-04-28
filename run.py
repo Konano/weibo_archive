@@ -152,7 +152,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
 
     if "type" not in pic:
         return
-    if pic["type"] == "livephotos":
+    if pic["type"] == "livephoto":
         url = pic["videoSrc"]
         ext = url.split("?")[0].split(".")[-1]
         if ext in ["mov"]:
