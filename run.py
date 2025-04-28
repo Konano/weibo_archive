@@ -139,8 +139,9 @@ def fetchLongText(post, dirname) -> None:
 def fetchPhoto(pic, post_id: str, dirname) -> None:
     pid = pic["pid"]
     url = pic["large"]["url"]
-    if url.split(".")[-1] in ["jpg", "gif"]:
-        filename = f"{dirname}/pic/{post_id}_{pid}.{url.split('.')[-1]}"
+    ext = url.split("?")[0].split(".")[-1]
+    if ext in ["jpg", "gif"]:
+        filename = f"{dirname}/pic/{post_id}_{pid}.{ext}"
     else:
         print(pic)
         raise NotImplementedError
@@ -153,8 +154,9 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         return
     if pic["type"] == "livephotos":
         url = pic["videoSrc"]
-        if url.split(".")[-1] in ["mov"]:
-            filename = f"{dirname}/pic/{post_id}_{pid}.{url.split('.')[-1]}"
+        ext = url.split("?")[0].split(".")[-1]
+        if ext in ["mov"]:
+            filename = f"{dirname}/pic/{post_id}_{pid}.{ext}"
         else:
             print(pic)
             raise NotImplementedError
