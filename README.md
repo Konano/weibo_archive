@@ -36,7 +36,7 @@
 
 #### 其他的微博备份方案
 
-|  | weibo-archive | [Speechless](https://github.com/meterscao/Speechless) | ~~MemoMe*~~ | [weibo-extend](https://github.com/loo-y/weibo-extend) | [Weibo Archiver](https://github.com/Chilfish/Weibo-archiver) |
+|  | weibo-archive | ~~[Speechless](https://github.com/meterscao/Speechless)~~ | ~~MemoMe*~~ | [weibo-extend](https://github.com/loo-y/weibo-extend) | [Weibo Archiver](https://github.com/Chilfish/Weibo-archiver) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | **运行形式** | 运行代码 | 浏览器插件 | 安装软件 | 浏览器插件 | 浏览器插件 |
 | **收费与否** | 免费 | 免费 | 最低 ￥39 | 免费 | 免费 |
@@ -63,3 +63,7 @@
 - [x] 增量备份。
 - [ ] 导出成 PDF 或者 MHTML。**[help_wanted]**
 - [ ] 搞一个 Chrome 插件，可以在微博页面直接备份。**[help_wanted]**
+
+## Sponsor
+
+![](doc/sponsor.png)
