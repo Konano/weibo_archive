@@ -164,6 +164,18 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
             print("[+] Downloading Live Photo", pid, "from", url)
             resp = requests.get(url, headers={"referer": "https://weibo.com/"})
             open(filename, "wb").write(resp.content)
+    elif pic["type"] == "video":
+        url = pic["videoSrc"]
+        ext = url.split("?")[0].split(".")[-1]
+        filename = f"{dirname}/video/{post_id}_{pid}.mp4"
+        if not Path(filename).exists():
+            print("[+] Downloading Video", pid, "from", url)
+            if ext == "mp4":
+                resp = requests.get(url, headers={"referer": "https://weibo.com/"})
+                open(filename, "wb").write(resp.content)
+            else:
+                command = f'ffmpeg -i "{url}" -c copy -bsf:a aac_adtstoasc {filename}'
+                subprocess.run(command, shell=True)
     elif pic["type"] == "gifvideos":
         pass
     else:
