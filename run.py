@@ -153,6 +153,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
     if "type" not in pic:
         return
     if pic["type"] == "livephoto":
+        # https://video.weibo.com/media/play?livephoto=https%3A%2F%2Flivephoto.us.sinaimg.cn%2Fxxxxxxxxxxxxxxxx.mov
         url = pic["videoSrc"]
         # ext = url.split("?")[0].split(".")[-1]
         if ".mov" in url:
@@ -165,6 +166,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
             resp = requests.get(url, headers={"referer": "https://weibo.com/"})
             open(filename, "wb").write(resp.content)
     elif pic["type"] == "video":
+        # https://f.video.weibocdn.com/o0/xxxxxxxxxxxxxxxx.mp4?label=...
         url = pic["videoSrc"]
         ext = url.split("?")[0].split(".")[-1]
         filename = f"{dirname}/video/{post_id}_{pid}.mp4"
