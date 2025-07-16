@@ -154,9 +154,9 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         return
     if pic["type"] == "livephoto":
         url = pic["videoSrc"]
-        ext = url.split("?")[0].split(".")[-1]
-        if ext in ["mov"]:
-            filename = f"{dirname}/pic/{post_id}_{pid}.{ext}"
+        # ext = url.split("?")[0].split(".")[-1]
+        if ".mov" in url:
+            filename = f"{dirname}/pic/{post_id}_{pid}.mov"
         else:
             print(pic)
             raise NotImplementedError
