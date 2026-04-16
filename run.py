@@ -52,7 +52,7 @@ cache_dir = Path("cache")
 cache_dir.mkdir(exist_ok=True)
 
 
-def __request(url: str, custom_headers: dict = {}) -> dict:
+def _request(url: str, custom_headers: dict = {}) -> dict:
     headers = {
         **HEADERS,
         **custom_headers,
@@ -67,18 +67,18 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
     if cached and cache_file.exists():
         return json.load(cache_file.open("r", encoding="utf-8"))
     headers = {"referer": referer} if referer else {}
-    resp = __request(url, headers)
+    resp = _request(url, headers)
     time.sleep(random.random() * 0.3 + 0.7)
     if "ok" not in resp:
         print(resp)
         raise NotImplementedError
     if resp["ok"] != 1:
-        if resp.get("msg", "") in ["已过滤部分评论", "快来发表你的评论吧", "还没有人评论哦~快来抢沙发！"]:
+        if resp.get("msg", "") in ["已过滤部分评论", "快来发表你的评论吧", "还没有人评论哦~快来抢沙发！", "因存在疑似骚扰内容，已过滤部分评论"]:
             pass
         else:
             print(resp)
             refresh_cookie()
-            resp = __request(url, headers)
+            resp = _request(url, headers)
     if not all_ret:
         resp = resp.get("data", {})
     if cached:
@@ -91,6 +91,7 @@ def refresh_cookie(return_uid=False):
     resp = request("https://m.weibo.cn/api/config")
     cookie["XSRF-TOKEN"] = resp["st"]
 
+    print(f"[-] Cookie Refreshed")
     print(f"Time watermark: {cookie['_T_WM']}")
     print(f"XSRF token: {cookie['XSRF-TOKEN']}")
 
@@ -358,7 +359,7 @@ def fetchIncrementalPosts():
 
 def fetchPosts():
     if Path("posts.json").exists():
-        print("检测到 posts.json 文件，将进行增量备份")
+        print("[-] 检测到 posts.json 文件，将进行增量备份")
         return fetchIncrementalPosts()
     data = request(
         f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
