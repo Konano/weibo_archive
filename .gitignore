@@ -2,6 +2,7 @@ archive
 run.sh
 
 cache
+debug
 
 posts.json
 ext

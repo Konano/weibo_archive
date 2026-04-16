@@ -7,7 +7,7 @@ import time
 import zipfile
 from pathlib import Path
 
-import requests
+from debug_tools import debug_on_exception, http_get
 
 Path("cache").mkdir(exist_ok=True)
 Path("ext/comment").mkdir(parents=True, exist_ok=True)
@@ -59,7 +59,7 @@ def _request(url: str, custom_headers: dict = {}) -> dict:
         "cookie": "; ".join([f"{k}={v}" for k, v in cookie.items()]),
         "x-xsrf-token": cookie.get("XSRF-TOKEN", ""),
     }
-    return requests.get(url, headers=headers, timeout=(30, 60)).json()
+    return http_get(url, headers=headers, timeout=(30, 60)).json()
 
 
 def request(url: str, referer: str = "", cached: bool = False, all_ret=False) -> dict:
@@ -86,6 +86,7 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
     return resp
 
 
+@debug_on_exception
 def refresh_cookie(return_uid=False):
     cookie["_T_WM"] = int(time.time() / 3600) * 100001
     resp = request("https://m.weibo.cn/api/config")
@@ -94,6 +95,10 @@ def refresh_cookie(return_uid=False):
     print(f"[-] Cookie Refreshed")
     print(f"Time watermark: {cookie['_T_WM']}")
     print(f"XSRF token: {cookie['XSRF-TOKEN']}")
+    
+    if not resp.get("login", False):
+        print("[!] Cookie 可能无效，请检查 cookie.json 文件")
+        raise ValueError("Invalid cookie")
 
     if return_uid:
         return resp["uid"]
@@ -114,6 +119,7 @@ CID = int(more_url.split("/")[-1].split("_")[0])
 # ====================================================================================================
 
 
+@debug_on_exception
 def fetchRefreshedPost(post) -> dict:
     pid = post["id"]
     data = request(
@@ -123,6 +129,7 @@ def fetchRefreshedPost(post) -> dict:
     return data["cards"][0]["mblog"]
 
 
+@debug_on_exception
 def fetchLongText(post, dirname) -> None:
     pid = post["id"]
     filename = f"{dirname}/longtext/{pid}.json"
@@ -137,6 +144,7 @@ def fetchLongText(post, dirname) -> None:
     post["longtext"] = longtext
 
 
+@debug_on_exception
 def fetchPhoto(pic, post_id: str, dirname) -> None:
     pid = pic["pid"]
     url = pic["large"]["url"]
@@ -145,10 +153,10 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         filename = f"{dirname}/pic/{post_id}_{pid}.{ext}"
     else:
         print(pic)
-        raise NotImplementedError
+        raise NotImplementedError(f"Unsupported photo url format: {url}")
     if not Path(filename).exists():
         print("[+] Downloading Photo", pid, "from", url)
-        resp = requests.get(url, headers={"referer": "https://weibo.com/"})
+        resp = http_get(url, headers={"referer": "https://weibo.com/"})
         open(filename, "wb").write(resp.content)
 
     if "type" not in pic:
@@ -161,10 +169,10 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
             filename = f"{dirname}/pic/{post_id}_{pid}.mov"
         else:
             print(pic)
-            raise NotImplementedError
+            raise NotImplementedError(f"Unsupported live photo url format: {url}")
         if not Path(filename).exists():
             print("[+] Downloading Live Photo", pid, "from", url)
-            resp = requests.get(url, headers={"referer": "https://weibo.com/"})
+            resp = http_get(url, headers={"referer": "https://weibo.com/"})
             open(filename, "wb").write(resp.content)
     elif pic["type"] == "video":
         # https://f.video.weibocdn.com/o0/xxxxxxxxxxxxxxxx.mp4?label=...
@@ -174,7 +182,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         if not Path(filename).exists():
             print("[+] Downloading Video", pid, "from", url)
             if ext == "mp4":
-                resp = requests.get(url, headers={"referer": "https://weibo.com/"})
+                resp = http_get(url, headers={"referer": "https://weibo.com/"})
                 open(filename, "wb").write(resp.content)
             else:
                 command = f'ffmpeg -i "{url}" -c copy -bsf:a aac_adtstoasc {filename}'
@@ -183,9 +191,10 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         pass
     else:
         print(pic)
-        raise NotImplementedError
+        raise NotImplementedError(f"Unsupported photo type: {pic['type']}")
 
 
+@debug_on_exception
 def fetchVideo(post, dirname) -> None:
     pid = post["id"]
     url = list(post["page_info"]["urls"].values())[0]
@@ -196,13 +205,14 @@ def fetchVideo(post, dirname) -> None:
     print("[+] Downloading Video", pid, "from", url)
     url = list(fetchRefreshedPost(post)["page_info"]["urls"].values())[0]
     if ext == "mp4":
-        resp = requests.get(url)
+        resp = http_get(url)
         open(filename, "wb").write(resp.content)
     else:
         command = f'ffmpeg -i "{url}" -c copy -bsf:a aac_adtstoasc {filename}'
         subprocess.run(command, shell=True)
 
 
+@debug_on_exception
 def fetchSecondComments(mid, cid, max_id, dirname) -> tuple[list, int]:
     if int(max_id) == 0:
         filename = f"{dirname}/comment/{mid}_{cid}.json"
@@ -225,6 +235,7 @@ def fetchSecondComments(mid, cid, max_id, dirname) -> tuple[list, int]:
     return comments, max_id
 
 
+@debug_on_exception
 def fetchFirstComments(mid, max_id, dirname) -> tuple[list, int]:
     if int(max_id) == 0:
         filename = f"{dirname}/comment/{mid}.json"
@@ -256,6 +267,7 @@ def fetchFirstComments(mid, max_id, dirname) -> tuple[list, int]:
     return comments, max_id
 
 
+@debug_on_exception
 def fetchComments(post, dirname) -> None:
     mid = post["mid"]
     if post["comments_count"] == 0:
@@ -271,6 +283,7 @@ def fetchComments(post, dirname) -> None:
     post["comments"] = comments
 
 
+@debug_on_exception
 def fetchRelatedContent(post):
     # 原创的微博
     if post["isLongText"]:
@@ -295,6 +308,7 @@ def fetchRelatedContent(post):
 # ====================================================================================================
 
 
+@debug_on_exception
 def fetchIncrementalPosts():
     data = request(
         f"https://m.weibo.cn/api/container/getIndex?containerid={CID}_-_WEIBO_SECOND_PROFILE_WEIBO",
@@ -357,6 +371,7 @@ def fetchIncrementalPosts():
     return posts
 
 
+@debug_on_exception
 def fetchPosts():
     if Path("posts.json").exists():
         print("[-] 检测到 posts.json 文件，将进行增量备份")
