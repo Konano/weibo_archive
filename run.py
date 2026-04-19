@@ -95,7 +95,7 @@ def refresh_cookie(return_uid=False):
     print(f"[-] Cookie Refreshed")
     print(f"Time watermark: {cookie['_T_WM']}")
     print(f"XSRF token: {cookie['XSRF-TOKEN']}")
-    
+
     if not resp.get("login", False):
         print("[!] Cookie 可能无效，请检查 cookie.json 文件")
         raise ValueError("Invalid cookie")
@@ -363,7 +363,7 @@ def fetchIncrementalPosts():
                 else:
                     print("[+] Unknown card type", sub_card["card_type"])
         else:
-            print("[+] Unknown card type", card["card_type"])  
+            print("[+] Unknown card type", card["card_type"])
     if not posts:
         print("[+]", "No posts found!")
         return posts
