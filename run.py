@@ -6,6 +6,7 @@ import subprocess
 import time
 import zipfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 from debug_tools import debug_on_exception, http_get
 
@@ -156,19 +157,29 @@ def fetchLongText(post, dirname) -> None:
 
 
 @debug_on_exception
-def fetchPhoto(pic, post_id: str, dirname) -> None:
-    pid = pic["pid"]
-    url = pic["large"]["url"]
-    ext = url.split("?")[0].split(".")[-1]
-    if ext in ["jpg", "gif"]:
+def fetchPhoto(pic: dict, post_id: str, dirname) -> None:
+    def _file_ext_from_url(value: str) -> str:
+        if not value:
+            return ""
+        path = urlparse(value).path
+        if "." not in path:
+            return ""
+        return path.rsplit(".", 1)[-1].lower()
+
+    pid = pic.get("pid")
+    url = pic.get("large", {}).get("url", "")
+    ext = _file_ext_from_url(url)
+    if ext in ["jpg", "jpeg", "png", "gif", "webp"]:
         filename = f"{dirname}/pic/{post_id}_{pid}.{ext}"
+        if not Path(filename).exists():
+            print("[+] Downloading Photo", pid, "from", url)
+            resp = http_get(url, headers={"referer": "https://weibo.com/"})
+            open(filename, "wb").write(resp.content)
+    elif pic.get("type") in ["livephoto", "video", "gifvideos"]:
+        print("[!] Skipping invalid photo thumbnail", pid, "from", url)
     else:
         print(f'[?] {pic}')
         raise NotImplementedError(f"Unsupported photo url format: {url}")
-    if not Path(filename).exists():
-        print("[+] Downloading Photo", pid, "from", url)
-        resp = http_get(url, headers={"referer": "https://weibo.com/"})
-        open(filename, "wb").write(resp.content)
 
     if "type" not in pic:
         return
