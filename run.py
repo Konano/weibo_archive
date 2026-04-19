@@ -79,6 +79,16 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
             print(f'[?] {resp}')
             refresh_cookie()
             resp = _request(url, headers)
+    while resp.get("code") == -100 or resp.get("ok") == -100:
+        print(f'[?] {resp}')
+        if resp.get("url"):
+            print("[!] Weibo requested CAPTCHA verification. Open this URL and finish it:")
+            print(resp["url"])
+        else:
+            print("[!] Weibo requested CAPTCHA verification.")
+        input("[!] Press Enter after you finish verification to retry...")
+        resp = _request(url, headers)
+        time.sleep(random.random() * 0.3 + 0.7)
     if not all_ret:
         resp = resp.get("data", {})
     if cached:
