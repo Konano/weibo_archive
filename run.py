@@ -70,13 +70,13 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
     resp = _request(url, headers)
     time.sleep(random.random() * 0.3 + 0.7)
     if "ok" not in resp:
-        print(resp)
+        print(f'[?] {resp}')
         raise NotImplementedError
     if resp["ok"] != 1:
         if resp.get("msg", "") in ["已过滤部分评论", "快来发表你的评论吧", "还没有人评论哦~快来抢沙发！", "因存在疑似骚扰内容，已过滤部分评论"]:
             pass
         else:
-            print(resp)
+            print(f'[?] {resp}')
             refresh_cookie()
             resp = _request(url, headers)
     if not all_ret:
@@ -89,7 +89,8 @@ def request(url: str, referer: str = "", cached: bool = False, all_ret=False) ->
 @debug_on_exception
 def refresh_cookie(return_uid=False):
     cookie["_T_WM"] = int(time.time() / 3600) * 100001
-    resp = request("https://m.weibo.cn/api/config")
+    resp = _request("https://m.weibo.cn/api/config")
+    resp = resp.get("data", {})
     cookie["XSRF-TOKEN"] = resp["st"]
 
     print(f"[-] Cookie Refreshed")
@@ -152,7 +153,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
     if ext in ["jpg", "gif"]:
         filename = f"{dirname}/pic/{post_id}_{pid}.{ext}"
     else:
-        print(pic)
+        print(f'[?] {pic}')
         raise NotImplementedError(f"Unsupported photo url format: {url}")
     if not Path(filename).exists():
         print("[+] Downloading Photo", pid, "from", url)
@@ -168,7 +169,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
         if ".mov" in url:
             filename = f"{dirname}/pic/{post_id}_{pid}.mov"
         else:
-            print(pic)
+            print(f'[?] {pic}')
             raise NotImplementedError(f"Unsupported live photo url format: {url}")
         if not Path(filename).exists():
             print("[+] Downloading Live Photo", pid, "from", url)
@@ -190,7 +191,7 @@ def fetchPhoto(pic, post_id: str, dirname) -> None:
     elif pic["type"] == "gifvideos":
         pass
     else:
-        print(pic)
+        print(f'[?] {pic}')
         raise NotImplementedError(f"Unsupported photo type: {pic['type']}")
 
 
@@ -228,7 +229,7 @@ def fetchSecondComments(mid, cid, max_id, dirname) -> tuple[list, int]:
     if "data" not in data:
         if data["errno"] == "100011" and data["msg"] == "暂无数据":
             return [], 0
-        print(data)
+        print(f'[?] data')
         raise NotImplementedError
     comments = data["data"]
     max_id = data["max_id"]
